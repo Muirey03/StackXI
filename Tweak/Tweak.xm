@@ -8,7 +8,7 @@
 #define ICON_CLEAR_ALL_PATH @"/Library/PreferenceBundles/StackXIPrefs.bundle/SXIClearAll.png"
 #define LANG_BUNDLE_PATH @"/Library/PreferenceBundles/StackXIPrefs.bundle/StackXILocalization.bundle"
 #define TEMPWIDTH 0
-#define TEMPDURATION 0.4
+#define TEMPDURATION (fasterAnimations ? 0.2 : 0.4)
 #define CLEAR_DURATION 0.2
 #define MAX_SHOW_BEHIND 3 //amount of blank notifications to show behind each stack
 
@@ -24,6 +24,7 @@ static NCNotificationDispatcher *dispatcher = nil;
 static bool showButtons = false;
 static bool useIcons = false;
 static bool canUpdate = true;
+static bool fasterAnimations = false;
 static NSDictionary<NSString*, NSString*> *translationDict;
 
 UIImage * imageWithView(UIView *view) {
@@ -92,7 +93,7 @@ static void fakeNotifications() {
   if (bbServer == self) {
     bbServer = nil;
   }
-  
+
   %orig;
 }
 %end
@@ -105,7 +106,7 @@ static void fakeNotifications() {
 
 -(void)viewDidLoad{
     %orig;
-    sbdbclvc = self; 
+    sbdbclvc = self;
 }
 
 %end
@@ -151,7 +152,7 @@ static void fakeNotifications() {
     for (NCNotificationRequest *request in self.sxiStackedNotificationRequests) {
         request.sxiVisible = true;
     }
-    
+
     [listCollectionView sxiExpand:self.bulletin.sectionID];
 }
 
@@ -163,7 +164,7 @@ static void fakeNotifications() {
     for (NCNotificationRequest *request in self.sxiStackedNotificationRequests) {
         request.sxiVisible = false;
     }
-    
+
     [listCollectionView sxiCollapse:self.bulletin.sectionID];
 }
 
@@ -190,7 +191,7 @@ static void fakeNotifications() {
     for (NCNotificationRequest *request in self.sxiStackedNotificationRequests) {
         [request sxiClear:false];
     }
-    
+
     [self sxiClear:false];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, CLEAR_DURATION * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         canUpdate = true;
@@ -481,10 +482,10 @@ static void fakeNotifications() {
     }
 
     NCNotificationListCell* cell = %orig;
-    
+
     if (!cell.contentViewController.notificationRequest.sxiVisible) {
         if (cell.contentViewController.notificationRequest.sxiPositionInStack > MAX_SHOW_BEHIND) {
-            cell.hidden = YES; 
+            cell.hidden = YES;
         } else {
             cell.hidden = NO;
             if (cell.frame.size.height != 50) {
@@ -494,7 +495,7 @@ static void fakeNotifications() {
     } else {
         cell.hidden = NO;
     }
-    
+
     return cell;
 }
 
@@ -737,10 +738,10 @@ static void fakeNotifications() {
             [self.sxiCollapseButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
             self.sxiCollapseButton.layer.masksToBounds = true;
             self.sxiCollapseButton.layer.cornerRadius = 12.5;
-            
+
             [self.sxiClearAllButton addTarget:self action:@selector(sxiClearAll:) forControlEvents:UIControlEventTouchUpInside];
             [self.sxiCollapseButton addTarget:self action:@selector(sxiCollapse:) forControlEvents:UIControlEventTouchUpInside];
-            
+
             if (useIcons) {
                 self.sxiCollapseButton.imageView.contentMode = UIViewContentModeScaleAspectFit;
                 [self.sxiCollapseButton setTitle:NULL forState:UIControlStateNormal];
@@ -886,7 +887,7 @@ static void fakeNotifications() {
         if (!c) continue;
         NCNotificationListCell* cell = (NCNotificationListCell*)c;
         if ([notificationIdentifier isEqualToString:cell.contentViewController.notificationRequest.notificationIdentifier]) {
-            
+
             [UIView animateWithDuration:CLEAR_DURATION animations:^{
                 cell.alpha = 0.0;
             }];
@@ -919,10 +920,10 @@ static void fakeNotifications() {
     for (NCNotificationRequest *request in priorityList.requests) {
         if (!request.bulletin.sectionID) continue;
 
-        if (![sectionIDs containsObject:request.bulletin.sectionID] && request.sxiIsStack && request.sxiIsExpanded) {	
-            [request sxiCollapse];	
-            [sectionIDs addObject:request.bulletin.sectionID];	
-        }	
+        if (![sectionIDs containsObject:request.bulletin.sectionID] && request.sxiIsStack && request.sxiIsExpanded) {
+            [request sxiCollapse];
+            [sectionIDs addObject:request.bulletin.sectionID];
+        }
     }
 
     [listCollectionView reloadData];
@@ -1021,6 +1022,7 @@ static void displayStatusChanged(CFNotificationCenterRef center, void *observer,
     bool enabled = [([file objectForKey:@"Enabled"] ?: @(YES)) boolValue];
     showButtons = [([file objectForKey:@"ShowButtons"] ?: @(NO)) boolValue];
     useIcons = [([file objectForKey:@"UseIcons"] ?: @(NO)) boolValue];
+    fasterAnimations = [([file objectForKey:@"FasterAnimations"] ?: @(NO)) boolValue];
     bool debug = false;
     #ifdef DEBUG
     debug = true;
